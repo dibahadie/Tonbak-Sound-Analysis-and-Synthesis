@@ -1,0 +1,19 @@
+{
+    "radius": 0.25,
+    "thickness": 0.00025,
+    "young_modulus": 3700000000,
+    "tension_0": 4300,
+    "d1": 1.42,
+    "d3": 0.00449,
+    "hammer_mass": 0.084,
+    "hammer_vel": 6.5,
+    "hammer_stiffness": 920000,
+    "hammer_dissipation": 1.9,
+    "hammer_alpha": 0.4,
+    "hit_r": 0.02,
+    "pickup_r": 0.08,
+    "energy_decay_g": 0.9959,
+    "air_mass_load": 0.03,
+    "air_stiffness": 170,
+    "air_damping": 0.53
+}

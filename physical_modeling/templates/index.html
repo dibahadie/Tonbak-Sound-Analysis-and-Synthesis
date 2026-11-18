@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tonbak Physical Modeler</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #fff; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #2d2d2d; padding: 20px; border-radius: 8px; }
+        label { display: block; margin-top: 10px; font-size: 0.9em; }
+        input[type=range] { width: 100%; }
+        .val-disp { float: right; color: #4caf50; font-weight: bold; }
+        .controls { margin-top: 20px; padding: 20px; background: #3d3d3d; border-radius: 8px; text-align: center; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; background: #4caf50; color: white; border: none; border-radius: 4px; }
+        input[type=text] { padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
+        audio { width: 100%; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <h2>Tonbak Physical Synthesis Engine</h2>
+
+    <form id="synthForm">
+        <div class="grid">
+            <!-- Membrane Config -->
+            <div class="card">
+                <h3>Membrane</h3>
+                <label>Radius (m) <span class="val-disp" id="radius_val">0.13</span></label>
+                <input type="range" id="radius" min="0.05" max="0.3" step="0.01" value="0.13" oninput="updateVal(this)">
+                
+                <label>Thickness (m) <span class="val-disp" id="thickness_val">0.00035</span></label>
+                <input type="range" id="thickness" min="0.0001" max="0.002" step="0.00005" value="0.00035" oninput="updateVal(this)">
+                
+                <label>Young's Modulus <span class="val-disp" id="young_modulus_val">1000000000</span></label>
+                <input type="range" id="young_modulus" min="1e8" max="5e9" step="1e8" value="1e9" oninput="updateVal(this)">
+                
+                <label>Base Tension (N/m) <span class="val-disp" id="tension_0_val">2000</span></label>
+                <input type="range" id="tension_0" min="500" max="5000" step="100" value="2000" oninput="updateVal(this)">
+                
+                <label>Damping d1 (Low Freq) <span class="val-disp" id="d1_val">0.2</span></label>
+                <input type="range" id="d1" min="0.01" max="5.0" step="0.01" value="0.2" oninput="updateVal(this)">
+                
+                <label>Damping d3 (High Freq) <span class="val-disp" id="d3_val">0.0015</span></label>
+                <input type="range" id="d3" min="0.00001" max="0.01" step="0.00001" value="0.0015" oninput="updateVal(this)">
+            </div>
+
+            <!-- Hammer Config -->
+            <div class="card">
+                <h3>Exciter (Hammer)</h3>
+                <label>Mass (kg) <span class="val-disp" id="hammer_mass_val">0.04</span></label>
+                <input type="range" id="hammer_mass" min="0.001" max="0.1" step="0.001" value="0.04" oninput="updateVal(this)">
+                
+                <label>Velocity (m/s) <span class="val-disp" id="hammer_vel_val">3.0</span></label>
+                <input type="range" id="hammer_vel" min="0.5" max="10.0" step="0.1" value="3.0" oninput="updateVal(this)">
+                
+                <label>Stiffness (N/m) <span class="val-disp" id="hammer_stiffness_val">20000</span></label>
+                <input type="range" id="hammer_stiffness" min="1000" max="1000000" step="1000" value="20000" oninput="updateVal(this)">
+                
+                <label>Dissipation <span class="val-disp" id="hammer_dissipation_val">0.5</span></label>
+                <input type="range" id="hammer_dissipation" min="0.0" max="2.0" step="0.1" value="0.5" oninput="updateVal(this)">
+                
+                <!-- NEW: Hammer Geometry Exponent -->
+                <label>Contact Geometry (Alpha) <span class="val-disp" id="hammer_alpha_val">1.5</span></label>
+                <input type="range" id="hammer_alpha" min="0.1" max="3.0" step="0.1" value="1.5" oninput="updateVal(this)">
+            </div>
+
+            <!-- System & Cavity Config -->
+            <div class="card">
+                <h3>Shell & Interactions</h3>
+                <label>Hit Position (r) <span class="val-disp" id="hit_r_val">0.02</span></label>
+                <input type="range" id="hit_r" min="0.0" max="0.2" step="0.01" value="0.02" oninput="updateVal(this)">
+                
+                <label>Pickup Position (r) <span class="val-disp" id="pickup_r_val">0.08</span></label>
+                <input type="range" id="pickup_r" min="0.0" max="0.2" step="0.01" value="0.08" oninput="updateVal(this)">
+
+                <label>Energy Decay (g) <span class="val-disp" id="energy_decay_g_val">0.9995</span></label>
+                <input type="range" id="energy_decay_g" min="0.9900" max="1.0000" step="0.0001" value="0.9995" oninput="updateVal(this)">
+                
+                <label>Air Mass Load <span class="val-disp" id="air_mass_load_val">0.03</span></label>
+                <input type="range" id="air_mass_load" min="0.0" max="0.1" step="0.005" value="0.03" oninput="updateVal(this)">
+                
+                <label>Air Stiffness <span class="val-disp" id="air_stiffness_val">800.0</span></label>
+                <input type="range" id="air_stiffness" min="0.0" max="5000.0" step="10.0" value="800.0" oninput="updateVal(this)">
+                
+                <label>Air Damping <span class="val-disp" id="air_damping_val">0.05</span></label>
+                <input type="range" id="air_damping" min="0.0" max="20.0" step="0.01" value="0.05" oninput="updateVal(this)">
+            </div>
+        </div>
+    </form>
+
+    <div class="controls">
+        <button onclick="generateAudio()">Generate Sound</button>
+        <br><br>
+        <input type="text" id="presetName" placeholder="Preset Name (e.g. deep_tom)">
+        <button onclick="saveConfig()" style="background: #2196F3;">Save Config</button>
+        
+        <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <script>
+        function updateVal(slider) {
+            document.getElementById(slider.id + '_val').innerText = slider.value;
+        }
+
+        function getFormData() {
+            const inputs = document.querySelectorAll('input[type="range"]');
+            let data = {};
+            inputs.forEach(input => { data[input.id] = parseFloat(input.value); });
+            return data;
+        }
+
+        async function generateAudio() {
+            const data = getFormData();
+            const btn = document.querySelector('button');
+            btn.innerText = "Computing Mechanics...";
+            
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const player = document.getElementById('audioPlayer');
+                player.src = url;
+                player.play();
+            } else {
+                alert("Synthesis failed. Check server console.");
+            }
+            btn.innerText = "Generate Sound";
+        }
+
+        async function saveConfig() {
+            let data = getFormData();
+            data['config_name'] = document.getElementById('presetName').value || 'untitled';
+            
+            const response = await fetch('/save_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                alert("Configuration saved to /configs/" + data['config_name'] + ".json");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -64,10 +64,7 @@ def plot_acoustic_comparison(original_audio, synth_audio, sr=44100, compare_dura
     ax4.set_title("Synthesized Spectrogram")
     ax4.set_ylim(0, 2000)
     ax4.set_ylabel("") # Hide Y label for the second spectrogram
-
-    # Add a shared colorbar for the spectrograms
-    fig.colorbar(img, ax=[ax3, ax4], format="%+2.0f dB", pad=0.01)
-
+    
     plt.tight_layout()
     plt.show()
 
