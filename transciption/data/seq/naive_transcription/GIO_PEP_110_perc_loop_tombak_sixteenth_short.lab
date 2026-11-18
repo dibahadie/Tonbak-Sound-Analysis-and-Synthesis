@@ -1,0 +1,9 @@
+0.000000	0.120715	hit_mid_open
+0.120715	0.260871	buzz_roll_mid
+0.260871	0.401289	buzz_roll_low
+0.401289	0.530374	buzz_roll_low
+0.530374	0.673934	flam_side
+0.673934	0.809704	buzz_roll_mid
+0.809704	0.946473	flam_quiet
+0.946473	1.079223	flam_quiet
+1.079223	2.181837	buzz_roll_mid
