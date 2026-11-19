@@ -4,10 +4,10 @@ from typing import Optional
 import torch
 from torch import nn
 
-from drumblender.models.components import FiLM
-from drumblender.models.components import GatedActivation
-from drumblender.models.components import Pad
-from drumblender.models.components import TFiLM
+from .components import FiLM
+from .components import GatedActivation
+from .components import Pad
+from .components import TFiLM
 
 __all__ = ["TCN"]
 

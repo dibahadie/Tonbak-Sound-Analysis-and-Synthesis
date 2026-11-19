@@ -7,13 +7,14 @@ import torch
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from torch.utils.data import DataLoader
 
-from drumblender.data.audio import AudioWithParametersDataset
-from drumblender.models.encoders import ModalAmpParameters
-from drumblender.models.soundstream import SoundStreamAttentionEncoder, SoundStreamEncoder
-from drumblender.models.tcn import TCN
-from drumblender.synths import ModalSynth, NoiseGenerator
-from drumblender.tasks import DrumBlender
-from drumblender.utils.metrics import LogSpectralDistance, SpectralFluxOnsetError
+from data.audio import AudioWithParametersDataset
+from models.encoders import ModalAmpParameters
+from models.soundstream import SoundStreamAttentionEncoder, SoundStreamEncoder
+from models.tcn import TCN
+from synths.modal import ModalSynth 
+from synths.noise import NoiseGenerator
+from tasks.drumblender import DrumBlender
+from utils.metrics import LogSpectralDistance, SpectralFluxOnsetError
 
 
 class DrumBlenderWithOptim(DrumBlender):

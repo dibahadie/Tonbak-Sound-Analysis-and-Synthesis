@@ -13,11 +13,11 @@ export PYTHONPATH="/data/anasynth_nonbp/hadi/Tonbak/Tonbak-Sound-Analysis-and-Sy
 #   --sample_rate 48000 \
 #   --duration 2.0
 
-python "${WORK_DIR}/2_extract_modal.py" \
-  --work_dir "${WORK_DIR}" \
-  --sample_rate 48000 \
-  --num_modes 64 \
-  --hop_length 256
+# python "${WORK_DIR}/2_extract_modal.py" \
+#   --work_dir "${WORK_DIR}" \
+#   --sample_rate 48000 \
+#   --num_modes 64 \
+#   --hop_length 256
 
 python "${WORK_DIR}/3_train.py" \
   --work_dir "${WORK_DIR}" \
