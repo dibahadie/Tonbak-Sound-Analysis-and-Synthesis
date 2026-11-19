@@ -1,3 +1,4 @@
 tobnabk_dataset
 papers
-transcription/data/*
+transcription/data
+transcription/extracted_one_shots
