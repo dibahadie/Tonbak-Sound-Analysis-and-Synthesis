@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE_DIR="${1:?Usage: ./run_pipeline.sh ../../data_processing/extracted_one_shots [run_name]}"
+SOURCE_DIR="${1:?Usage: ./synthesis/drumblender/run_pipeline.sh /path/to/extracted_one_shots [run_name]}"
 RUN_NAME="${2:-tonbak_ts_n}"
-WORK_DIR="synthesis/drumblender"
+WORK_DIR="."
 
-python "${WORK_DIR}/1_prepare_data.py" \
-  --source_dir "${SOURCE_DIR}" \
-  --work_dir "${WORK_DIR}" \
-  --sr 48000 \
-  --duration 2.0 \
-  --seed 42
+export PYTHONPATH="/data/anasynth_nonbp/hadi/Tonbak/Tonbak-Sound-Analysis-and-Synthesis/synthesis/drumblender"
 
-python "${WORK_DIR}/2_extract_sines.py" \
+# python "${WORK_DIR}/1_prepare_data.py" \
+#   --source_dir "${SOURCE_DIR}" \
+#   --work_dir "${WORK_DIR}" \
+#   --sample_rate 48000 \
+#   --duration 2.0
+
+python "${WORK_DIR}/2_extract_modal.py" \
   --work_dir "${WORK_DIR}" \
-  --n_sines 64 \
+  --sample_rate 48000 \
+  --num_modes 64 \
   --hop_length 256
 
 python "${WORK_DIR}/3_train.py" \
@@ -22,5 +24,4 @@ python "${WORK_DIR}/3_train.py" \
   --run_name "${RUN_NAME}" \
   --mixing "T(S)+N" \
   --batch_size 12 \
-  --lr 1e-4 \
-  --seed 42
+  --lr 1e-4

@@ -1,4 +1,11 @@
 tobnabk_dataset
 papers
-transcription/data
-transcription/extracted_one_shots
+data_processing/data
+data_processing/extracted_one_shots
+synthesis/drumblender/data/audio
+synthesis/drumblender/data/features
+synthesis/drumblender/data/metadata.json
+synthesis/modal_resonator/data
+*pycache*
+synthesis/modal_resonator/runs
+synthesis/modal_resonator/generated_samples
