@@ -1,138 +1,95 @@
 import argparse
-import csv
-import random
-import shutil
-from collections import defaultdict
+import json
 from pathlib import Path
 
-import librosa
-import numpy as np
-import soundfile as sf
+from tqdm import tqdm
+
+from utils.audio import preprocess_audio_file
+from utils.data import str2int
 
 AUDIO_EXTS = {".wav", ".flac", ".ogg", ".mp3", ".aiff", ".aif"}
-
-
-def trim_leading_silence(y: np.ndarray, top_db: float = 40.0) -> np.ndarray:
-    """Remove leading silence while preserving the decay tail."""
-    _, idx = librosa.effects.trim(y, top_db=top_db)
-    return y[idx[0]:]
-
-
-def fix_length(y: np.ndarray, target_len: int) -> np.ndarray:
-    """Trim or zero-pad audio to exact target sample length."""
-    if len(y) >= target_len:
-        return y[:target_len]
-    return np.pad(y, (0, target_len - len(y)))
-
-
-def get_group_key(path: Path, delimiter: str) -> str:
-    """Group files by recording prefix (e.g., 'rec01_0001.wav' -> 'rec01')."""
-    return path.stem.rsplit(delimiter, 1)[0] if delimiter in path.stem else path.stem
 
 
 def prepare_data(
     source_dir: Path,
     work_dir: Path,
-    sr: int,
+    sample_rate: int,
     duration: float,
-    top_db: float,
+    silence_threshold_db: float,
     group_delimiter: str,
-    seed: int,
+    sample_type: str,
 ) -> None:
-    raw_dir = work_dir / "data" / "raw"
-    proc_dir = work_dir / "data" / "processed"
-    manifest_path = work_dir / "data" / "manifest.csv"
+    data_dir = work_dir / "data"
+    audio_dir = data_dir / "audio"
+    audio_dir.mkdir(parents=True, exist_ok=True)
 
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    proc_dir.mkdir(parents=True, exist_ok=True)
-
+    num_samples = int(round(sample_rate * duration))
     source_files = sorted(
         p for p in source_dir.rglob("*") if p.is_file() and p.suffix.lower() in AUDIO_EXTS
     )
     if not source_files:
         raise FileNotFoundError(f"No audio files found in {source_dir}")
 
-    target_len = int(round(sr * duration))
-    groups: dict[str, list[dict]] = defaultdict(list)
+    metadata = {}
+    skipped = 0
 
-    for src in source_files:
-        rel_name = src.relative_to(source_dir).as_posix().replace("/", "_")
-        raw_dst = raw_dir / rel_name
-        shutil.copy2(src, raw_dst)
+    for src in tqdm(source_files, desc="Preprocessing audio"):
+        rel_str = str(src.relative_to(source_dir))
+        file_id = str(str2int(rel_str))
+        out_file = audio_dir / f"{file_id}.wav"
 
-        y, _ = librosa.load(raw_dst, sr=sr, mono=True)
-        if len(y) == 0:
+        try:
+            preprocess_audio_file(
+                input_file=src,
+                output_file=out_file,
+                sample_rate=sample_rate,
+                num_samples=num_samples,
+                mono=True,
+                remove_start_silence=True,
+                silence_threshold_db=silence_threshold_db,
+            )
+        except ValueError as e:
+            skipped += 1
+            print(f"[SKIP] {src.name}: {e}")
             continue
 
-        y = trim_leading_silence(y, top_db=top_db)
-        peak = np.max(np.abs(y))
-        if peak > 0:
-            y = y / peak * 0.99
-        y = fix_length(y, target_len)
+        # Group by recording prefix so hits from the same recording stay in one split
+        stem = src.stem
+        pack_key = stem.rsplit(group_delimiter, 1)[0] if group_delimiter in stem else stem
 
-        proc_dst = proc_dir / f"{Path(rel_name).stem}.wav"
-        sf.write(proc_dst, y, sr, subtype="PCM_16")
+        metadata[file_id] = {
+            "filename": str(out_file.relative_to(data_dir)),
+            "original_name": rel_str,
+            "type": sample_type,
+            "sample_pack_key": pack_key,
+        }
 
-        group_key = get_group_key(proc_dst, group_delimiter)
-        groups[group_key].append({
-            "id": proc_dst.stem,
-            "audio_path": str(proc_dst.relative_to(work_dir)),
-            "group": group_key,
-        })
+    meta_path = data_dir / "metadata.json"
+    with meta_path.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
 
-    # Leak-free 80 / 10 / 10 split by group
-    group_keys = sorted(groups.keys())
-    rng = random.Random(seed)
-    rng.shuffle(group_keys)
-
-    n_groups = len(group_keys)
-    n_train = max(1, int(round(0.8 * n_groups)))
-    n_val = max(1, int(round(0.1 * n_groups))) if n_groups >= 3 else 0
-
-    split_map = {}
-    for i, gk in enumerate(group_keys):
-        if i < n_train:
-            split_map[gk] = "train"
-        elif i < n_train + n_val:
-            split_map[gk] = "val"
-        else:
-            split_map[gk] = "test"
-
-    rows = []
-    for gk, items in groups.items():
-        for item in items:
-            item["split"] = split_map[gk]
-            rows.append(item)
-
-    with manifest_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["id", "audio_path", "group", "split"])
-        writer.writeheader()
-        writer.writerows(rows)
-
-    counts = {s: sum(1 for r in rows if r["split"] == s) for s in ("train", "val", "test")}
-    print(f"Prepared {len(rows)} files -> {manifest_path}")
-    print(f"Split counts: {counts}")
+    print(f"Done. Saved {len(metadata)} files ({skipped} skipped) -> {meta_path}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Copy, preprocess, and split drum one-shots.")
-    parser.add_argument("--source_dir", type=Path, required=True, help="Source folder of drum audio files.")
-    parser.add_argument("--work_dir", type=Path, default=Path("synthesis/drumblender"), help="DrumBlender workspace root.")
-    parser.add_argument("--sr", type=int, default=48000, help="Target sample rate (default: 48000).")
-    parser.add_argument("--duration", type=float, default=2.0, help="Fixed clip length in seconds (default: 2.0).")
-    parser.add_argument("--top_db", type=float, default=40.0, help="Silence threshold in dB for leading trim.")
-    parser.add_argument("--group_delimiter", type=str, default="_", help="Delimiter separating recording ID from segment ID.")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducible splits.")
+    parser = argparse.ArgumentParser(description="Preprocess drum one-shots for DrumBlender.")
+    parser.add_argument("--source_dir", type=Path, required=True, help="Source folder of drum one-shots.")
+    parser.add_argument("--work_dir", type=Path, default=Path("synthesis/drumblender"))
+    parser.add_argument("--sample_rate", type=int, default=48000)
+    parser.add_argument("--duration", type=float, default=2.0)
+    parser.add_argument("--silence_threshold_db", type=float, default=-60.0)
+    parser.add_argument("--group_delimiter", type=str, default="_")
+    parser.add_argument("--sample_type", type=str, default="acoustic")
     args = parser.parse_args()
 
     prepare_data(
         source_dir=args.source_dir,
         work_dir=args.work_dir,
-        sr=args.sr,
+        sample_rate=args.sample_rate,
         duration=args.duration,
-        top_db=args.top_db,
+        silence_threshold_db=args.silence_threshold_db,
         group_delimiter=args.group_delimiter,
-        seed=args.seed,
+        sample_type=args.sample_type,
     )
 
 
