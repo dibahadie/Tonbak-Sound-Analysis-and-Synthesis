@@ -12,7 +12,7 @@ import torch
 import torchaudio
 from torch.utils.data import DataLoader
 
-from timbreremap.np import OnsetFrames
+from .np.core import OnsetFrames
 
 # Setup logging
 logging.basicConfig()
@@ -107,6 +107,8 @@ class OnsetFeatureDataModule(L.LightningDataModule):
             audio = []
             for f in audio_files:
                 x, sr = torchaudio.load(f)
+                if x.shape[0] > 1:
+                    x = x.mean(dim=0, keepdim=True)
 
                 # Resample if necessary
                 if sr != self.sample_rate:

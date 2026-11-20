@@ -10,3 +10,8 @@ synthesis/modal_resonator/data
 synthesis/modal_resonator/runs
 synthesis/modal_resonator/generated_samples
 synthesis/drumblender/runs
+synthesis/timbre-remap/generated_samples/
+synthesis/drumblender/generated_samples/
+synthesis/timbre-remap/runs/*
+synthesis/brave/data
+synthesis/brave/concat_wavs

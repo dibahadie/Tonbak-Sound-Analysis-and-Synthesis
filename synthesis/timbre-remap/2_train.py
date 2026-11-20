@@ -15,6 +15,69 @@ from timbreremap.loss import FeatureDifferenceLoss
 from timbreremap.synth import Snare808
 from timbreremap.tasks import TimbreRemappingTask
 
+import torch.nn.functional as F
+import torchaudio
+from timbreremap.data import OnsetFeatureDataModule
+
+
+class SingleHitDataModule(OnsetFeatureDataModule):
+    def prepare_data(self) -> None:
+        audio_files = sorted(self.audio_path.glob("*.wav"))
+        assert len(audio_files) > 0, "No .wav files found"
+
+        clips = []
+        for f in audio_files:
+            x, sr = torchaudio.load(f)
+            if x.shape[0] > 1:
+                x = x.mean(dim=0, keepdim=True)
+            if sr != self.sample_rate:
+                x = torchaudio.transforms.Resample(sr, self.sample_rate)(x)
+
+            # Skip near-silent files
+            abs_x = x[0].abs()
+            peak = abs_x.max()
+            if peak < 1e-5:
+                continue
+
+            # Align to first sample reaching 2% (-34 dB) of the hit's peak, backtrack 16 samples
+            above = torch.nonzero(abs_x >= 0.02 * peak, as_tuple=False)
+            start = max(int(above[0].item()) - 16, 0) if len(above) > 0 else 0
+            x = x[:, start:]
+
+            # Pad or crop to exactly 1.0s (self.sample_rate samples)
+            n = x.shape[-1]
+            if n < self.sample_rate:
+                x = F.pad(x, (0, self.sample_rate - n))
+            else:
+                x = x[:, : self.sample_rate]
+            clips.append(x)
+
+        audio = torch.cat(clips, dim=0).float()
+        self.audio = audio
+
+        # Full features + median loudness reference (same as OnsetFeatureDataModule)
+        self.full_features = self.feature(audio)
+        loudsort = torch.argsort(self.full_features[:, 0], descending=True)
+        idx = loudsort[int(len(loudsort) * 0.5)]
+        self.ref_idx = idx
+
+        self.diff = self.full_features - self.full_features[idx]
+        self.norm = torch.abs(1.0 / (self.diff.max(dim=0)[0] - self.diff.min(dim=0)[0] + 1e-8)).float()
+
+        # Onset features with 1st-99th percentile normalization to prevent outlier squashing
+        onset = self.onset_feature(audio)
+        lo = torch.quantile(onset, 0.01, dim=0)
+        hi = torch.quantile(onset, 0.99, dim=0)
+        self.onset_features = torch.clamp((onset - lo) / (hi - lo + 1e-8), 0.0, 1.0)
+
+        # Train / val / test splits
+        if self.test_split > 0.0:
+            self.train_ids, self.test_ids = self.split_data(loudsort, self.ref_idx, self.test_split)
+        else:
+            self.train_ids = loudsort
+        if self.val_split > 0.0:
+            self.train_ids, self.val_ids = self.split_data(self.train_ids, self.ref_idx, self.val_split)
+
 
 class TimbreRemappingTaskWithOptim(TimbreRemappingTask):
     """Adds Adam + ReduceLROnPlateau(factor=0.5, patience=20)."""
@@ -57,7 +120,7 @@ def main() -> None:
     full_feature = build_full_feature_extractor(args.sample_rate)
     onset_feature = build_onset_feature_extractor(args.sample_rate, window=args.onset_window)
 
-    datamodule = OnsetFeatureDataModule(
+    datamodule = SingleHitDataModule(
         audio_path=args.audio_path,
         feature=full_feature,
         onset_feature=onset_feature,

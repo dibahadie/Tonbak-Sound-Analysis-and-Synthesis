@@ -1,0 +1,29 @@
+include 'configs/v1.gin'
+include 'configs/causal.gin'
+
+# 44.1 kHz, 16-band PQMF with 40 dB attenuation
+SAMPLING_RATE = 44100
+N_BAND = 16
+pqmf.CachedPQMF.attenuation = 40
+
+# Halved capacity -> hidden sizes [32, 64, 128, 256] (~4.9M params)
+CAPACITY = 32
+LATENT_SIZE = 128
+RATIOS = [2, 2, 2, 1]
+
+# Decoder residual dilations D = [3, 9, 27, 36]
+DILATIONS = [
+    [3, 1],
+    [9, 1],
+    [27, 1],
+    [36, 1],
+]
+
+# Remove noise generator
+blocks.GeneratorV1.noise_module = None
+
+# Halve discriminator channels to match BRAVE
+discriminator.CombineDiscriminators.capacity = 32
+
+# Two-phase training: 1M representation + 500k adversarial
+model.RAVE.warmup = 1000000

@@ -9,8 +9,9 @@ from einops import rearrange
 from models.encoders import ModalAmpParameters
 from models.soundstream import SoundStreamAttentionEncoder, SoundStreamEncoder
 from models.tcn import TCN
-from synths import ModalSynth, NoiseGenerator
-from tasks import DrumBlender
+from synths.modal import modal_synth, ModalSynth
+from synths.noise import NoiseGenerator
+from tasks.drumblender import DrumBlender
 
 
 def load_drumblender(ckpt_path: Path, mixing: str, num_modes: int, device: torch.device) -> DrumBlender:
@@ -141,7 +142,7 @@ def synthesize_morph(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Morph between two tonbak strokes with trained DrumBlender.")
-    parser.add_argument("--work_dir", type=Path, default=Path("synthesis/drumblender"))
+    parser.add_argument("--work_dir", type=Path, default=Path("."))
     parser.add_argument("--ckpt", type=Path, required=True, help="Path to trained .ckpt file.")
     parser.add_argument("--id_a", type=str, required=True, help="Metadata ID for Stroke A (e.g., tom).")
     parser.add_argument("--id_b", type=str, required=True, help="Metadata ID for Stroke B (e.g., bak).")
