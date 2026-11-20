@@ -23,5 +23,6 @@ python "${WORK_DIR}/3_train.py" \
   --work_dir "${WORK_DIR}" \
   --run_name "${RUN_NAME}" \
   --mixing "T(S)+N" \
-  --batch_size 12 \
-  --lr 1e-4
+  --batch_size 4 \
+  --lr 1e-4 \
+  --accumulate_grad_batches 3

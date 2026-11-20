@@ -50,6 +50,7 @@ def main() -> None:
     parser.add_argument("--max_hours", type=int, default=48)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=396818285)
+    parser.add_argument("--accumulate_grad_batches", type=int, default=1)
     args = parser.parse_args()
 
     pl.seed_everything(args.seed, workers=True)
@@ -159,10 +160,11 @@ def main() -> None:
         default_root_dir=run_dir,
         max_epochs=args.max_epochs,
         max_time={"hours": args.max_hours},
+        accumulate_grad_batches=args.accumulate_grad_batches,
         callbacks=callbacks,
         accelerator="auto",
         devices=1,
-        deterministic=True,
+        deterministic=False,
     )
     trainer.fit(model, train_loader, val_loader)
     trainer.test(model, test_loader, ckpt_path="best")

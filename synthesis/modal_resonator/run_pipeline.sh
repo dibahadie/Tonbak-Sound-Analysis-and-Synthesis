@@ -8,23 +8,23 @@ WORK_DIR="."
 # Keep imports scoped to synthesis/modal_resonator so neuralresonator/ is found cleanly
 export PYTHONPATH="${WORK_DIR}"
 
-# python "${WORK_DIR}/1_prepare_data.py" \
-#   --source_dir "${SOURCE_DIR}" \
-#   --work_dir "${WORK_DIR}" \
-#   --sample_rate 32000 \
-#   --audio_length 0.2 \
-#   --seed 42
+python "${WORK_DIR}/1_prepare_data.py" \
+  --source_dir "${SOURCE_DIR}" \
+  --work_dir "${WORK_DIR}" \
+  --sample_rate 32000 \
+  --audio_length 2.0 \
+  --seed 42
 
-# python "${WORK_DIR}/2_train.py" \
-#   --work_dir "${WORK_DIR}" \
-#   --run_name "${RUN_NAME}" \
-#   --n_parallel 32 \
-#   --n_biquads 2 \
-#   --sample_rate 32000 \
-#   --audio_length 0.2 \
-#   --batch_size 16 \
-#   --lr 1e-4 \
-#   --seed 42
+python "${WORK_DIR}/2_train.py" \
+  --work_dir "${WORK_DIR}" \
+  --run_name "${RUN_NAME}" \
+  --n_parallel 32 \
+  --n_biquads 2 \
+  --sample_rate 32000 \
+  --audio_length 2.0 \
+  --batch_size 8 \
+  --lr 1e-4 \
+  --seed 42
 
 # Render two quick test strokes (tom-like and bak-like) from the best checkpoint
 CKPT="${WORK_DIR}/runs/${RUN_NAME}/best.pt"
